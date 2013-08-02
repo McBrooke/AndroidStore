@@ -1,6 +1,7 @@
 package za.co.immedia.pinnedheaderlistview;
 
 import android.util.SparseArray;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
@@ -106,7 +107,7 @@ public abstract class SectionedBaseAdapter extends BaseAdapter implements Pinned
     public final int getViewTypeCount() {
         return getItemViewTypeCount() + getSectionHeaderViewTypeCount();
     }
-
+    
     public final int getSectionForPosition(int position) {
         // first try to retrieve values from cache
         Integer cachedSection = mSectionCache.get(position);
@@ -144,6 +145,11 @@ public abstract class SectionedBaseAdapter extends BaseAdapter implements Pinned
             sectionStart = sectionEnd;
         }
         return 0;
+    }
+    
+    @Override
+    public boolean onPinndHeaderTouchEvent(View headerView, int section, MotionEvent ev){
+    	return false;
     }
 
     public final boolean isSectionHeader(int position) {

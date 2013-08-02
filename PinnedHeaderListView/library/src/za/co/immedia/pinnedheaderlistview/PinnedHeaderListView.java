@@ -1,200 +1,289 @@
 package za.co.immedia.pinnedheaderlistview;
 
+import java.lang.reflect.Method;
+
 import android.content.Context;
 import android.graphics.Canvas;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.*;
+import android.widget.AbsListView;
 import android.widget.AbsListView.OnScrollListener;
+import android.widget.AdapterView;
+import android.widget.HeaderViewListAdapter;
+import android.widget.ListAdapter;
+import android.widget.ListView;
 
 public class PinnedHeaderListView extends ListView implements OnScrollListener {
 
-    private OnScrollListener mOnScrollListener;
+	private final static String TAG = PinnedHeaderListView.class
+			.getSimpleName();
 
-    public static interface PinnedSectionedHeaderAdapter {
-        public boolean isSectionHeader(int position);
+	private OnScrollListener mOnScrollListener;
 
-        public int getSectionForPosition(int position);
+	public static interface PinnedSectionedHeaderAdapter {
+		public boolean isSectionHeader(int position);
 
-        public View getSectionHeaderView(int section, View convertView, ViewGroup parent);
+		public int getSectionForPosition(int position);
 
-        public int getSectionHeaderViewType(int section);
+		public View getSectionHeaderView(int section, View convertView,
+				ViewGroup parent);
 
-        public int getCount();
+		public int getSectionHeaderViewType(int section);
 
-    }
+		public int getCount();
 
-    private PinnedSectionedHeaderAdapter mAdapter;
-    private View mCurrentHeader;
-    private int mCurrentHeaderViewType = 0;
-    private float mHeaderOffset;
-    private boolean mShouldPin = true;
-    private int mCurrentSection = 0;
-    private int mWidthMode;
-    private int mHeightMode;
+		public int getGlobalPosition(int section, int position);
 
-    public PinnedHeaderListView(Context context) {
-        super(context);
-        super.setOnScrollListener(this);
-    }
+		public boolean onPinndHeaderTouchEvent(View headerView, int section,
+				MotionEvent ev);
 
-    public PinnedHeaderListView(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        super.setOnScrollListener(this);
-    }
+	}
 
-    public PinnedHeaderListView(Context context, AttributeSet attrs, int defStyle) {
-        super(context, attrs, defStyle);
-        super.setOnScrollListener(this);
-    }
+	private PinnedSectionedHeaderAdapter mAdapter;
+	private View mCurrentHeader;
+	private int mCurrentHeaderViewType = 0;
+	private float mHeaderOffset;
+	private boolean mShouldPin = true;
+	private int mCurrentSection = 0;
+	private int mWidthMode;
+	private int mHeightMode;
 
-    public void setPinHeaders(boolean shouldPin) {
-        mShouldPin = shouldPin;
-    }
+	private Boolean threadStarted = false;
 
-    @Override
-    public void setAdapter(ListAdapter adapter) {
-        mCurrentHeader = null;
-        mAdapter = (PinnedSectionedHeaderAdapter) adapter;
-        super.setAdapter(adapter);
-    }
+	public PinnedHeaderListView(Context context) {
+		super(context);
+		super.setOnScrollListener(this);
+	}
 
-    @Override
-    public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
-        if (mOnScrollListener != null) {
-            mOnScrollListener.onScroll(view, firstVisibleItem, visibleItemCount, totalItemCount);
-        }
+	public PinnedHeaderListView(Context context, AttributeSet attrs) {
+		super(context, attrs);
+		super.setOnScrollListener(this);
+	}
 
-        if (mAdapter == null || mAdapter.getCount() == 0 || !mShouldPin || (firstVisibleItem < getHeaderViewsCount())) {
-            mCurrentHeader = null;
-            mHeaderOffset = 0.0f;
-            for (int i = firstVisibleItem; i < firstVisibleItem + visibleItemCount; i++) {
-                View header = getChildAt(i);
-                if (header != null) {
-                    header.setVisibility(VISIBLE);
-                }
-            }
-            return;
-        }
+	public PinnedHeaderListView(Context context, AttributeSet attrs,
+			int defStyle) {
+		super(context, attrs, defStyle);
+		super.setOnScrollListener(this);
+	}
 
-        firstVisibleItem -= getHeaderViewsCount();
+	public void setPinHeaders(boolean shouldPin) {
+		mShouldPin = shouldPin;
+	}
 
-        int section = mAdapter.getSectionForPosition(firstVisibleItem);
-        int viewType = mAdapter.getSectionHeaderViewType(section);
-        mCurrentHeader = getSectionHeaderView(section, mCurrentHeaderViewType != viewType ? null : mCurrentHeader);
-        ensurePinnedHeaderLayout(mCurrentHeader);
-        mCurrentHeaderViewType = viewType;
+	public boolean hasPinHeader() {
+		return mShouldPin;
+	}
 
-        mHeaderOffset = 0.0f;
+	public View getCurrentPinHeader() {
+		return mCurrentHeader;
+	}
 
-        for (int i = firstVisibleItem; i < firstVisibleItem + visibleItemCount; i++) {
-            if (mAdapter.isSectionHeader(i)) {
-                View header = getChildAt(i - firstVisibleItem);
-                float headerTop = header.getTop();
-                float pinnedHeaderHeight = mCurrentHeader.getMeasuredHeight();
-                header.setVisibility(VISIBLE);
-                if (pinnedHeaderHeight >= headerTop && headerTop > 0) {
-                    mHeaderOffset = headerTop - header.getHeight();
-                } else if (headerTop <= 0) {
-                    header.setVisibility(INVISIBLE);
-                }
-            }
-        }
+	public float getPinHeaderOffset() {
+		return mHeaderOffset;
+	}
 
-        invalidate();
-    }
+	@Override
+	public void setAdapter(ListAdapter adapter) {
+		mCurrentHeader = null;
+		mAdapter = (PinnedSectionedHeaderAdapter) adapter;
+		super.setAdapter(adapter);
+	}
 
-    @Override
-    public void onScrollStateChanged(AbsListView view, int scrollState) {
-        if (mOnScrollListener != null) {
-            mOnScrollListener.onScrollStateChanged(view, scrollState);
-        }
-    }
+	@Override
+	public void onScroll(AbsListView view, int firstVisibleItem,
+			int visibleItemCount, int totalItemCount) {
+		if (mOnScrollListener != null) {
+			mOnScrollListener.onScroll(view, firstVisibleItem,
+					visibleItemCount, totalItemCount);
+		}
 
-    private View getSectionHeaderView(int section, View oldView) {
-        boolean shouldLayout = section != mCurrentSection || oldView == null;
+		if (mAdapter == null || mAdapter.getCount() == 0 || !mShouldPin
+				|| (firstVisibleItem < getHeaderViewsCount())) {
+			mCurrentHeader = null;
+			mHeaderOffset = 0.0f;
+			for (int i = firstVisibleItem; i < firstVisibleItem
+					+ visibleItemCount; i++) {
+				View header = getChildAt(i);
+				if (header != null) {
+					header.setVisibility(VISIBLE);
+				}
+			}
+			return;
+		}
 
-        View view = mAdapter.getSectionHeaderView(section, oldView, this);
-        if (shouldLayout) {
-            // a new section, thus a new header. We should lay it out again
-            ensurePinnedHeaderLayout(view);
-            mCurrentSection = section;
-        }
-        return view;
-    }
+		firstVisibleItem -= getHeaderViewsCount();
 
-    private void ensurePinnedHeaderLayout(View header) {
-        if (header.isLayoutRequested()) {
-            int widthSpec = MeasureSpec.makeMeasureSpec(getMeasuredWidth(), mWidthMode);
-            
-            int heightSpec;
-            ViewGroup.LayoutParams layoutParams = header.getLayoutParams();
-            if (layoutParams != null && layoutParams.height > 0) {
-                heightSpec = MeasureSpec.makeMeasureSpec(layoutParams.height, MeasureSpec.EXACTLY);
-            } else {
-                heightSpec = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
-            }
-            header.measure(widthSpec, heightSpec);
-            header.layout(0, 0, header.getMeasuredWidth(), header.getMeasuredHeight());
-        }
-    }
+		int section = mAdapter.getSectionForPosition(firstVisibleItem);
+		int viewType = mAdapter.getSectionHeaderViewType(section);
+		mCurrentHeader = getSectionHeaderView(section,
+				mCurrentHeaderViewType != viewType ? null : mCurrentHeader);
+		ensurePinnedHeaderLayout(mCurrentHeader);
+		mCurrentHeaderViewType = viewType;
 
-    @Override
-    protected void dispatchDraw(Canvas canvas) {
-        super.dispatchDraw(canvas);
-        if (mAdapter == null || !mShouldPin || mCurrentHeader == null)
-            return;
-        int saveCount = canvas.save();
-        canvas.translate(0, mHeaderOffset);
-        canvas.clipRect(0, 0, getWidth(), mCurrentHeader.getMeasuredHeight()); // needed
-        // for
-        // <
-        // HONEYCOMB
-        mCurrentHeader.draw(canvas);
-        canvas.restoreToCount(saveCount);
-    }
+		mHeaderOffset = 0.0f;
 
-    @Override
-    public void setOnScrollListener(OnScrollListener l) {
-        mOnScrollListener = l;
-    }
+		for (int i = firstVisibleItem; i < firstVisibleItem + visibleItemCount; i++) {
+			if (mAdapter.isSectionHeader(i)) {
+				View header = getChildAt(i - firstVisibleItem);
+				float headerTop = header.getTop();
+				float pinnedHeaderHeight = mCurrentHeader.getMeasuredHeight();
+				header.setVisibility(VISIBLE);
+				if (pinnedHeaderHeight >= headerTop && headerTop > 0) {
+					mHeaderOffset = headerTop - header.getHeight();
+				} else if (headerTop <= 0) {
+					header.setVisibility(INVISIBLE);
+				}
+			}
+		}
+		invalidate();
+	}
 
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+	@Override
+	public void onScrollStateChanged(AbsListView view, int scrollState) {
+		if (mOnScrollListener != null) {
+			mOnScrollListener.onScrollStateChanged(view, scrollState);
+		}
+	}
 
-        mWidthMode = MeasureSpec.getMode(widthMeasureSpec);
-        mHeightMode = MeasureSpec.getMode(heightMeasureSpec);
-    }
+	
 
-    public void setOnItemClickListener(PinnedHeaderListView.OnItemClickListener listener) {
-        super.setOnItemClickListener(listener);
-    }
+	private View getSectionHeaderView(int section, View oldView) {
+		boolean shouldLayout = section != mCurrentSection || oldView == null;
 
-    public static abstract class OnItemClickListener implements AdapterView.OnItemClickListener {
-        @Override
-        public void onItemClick(AdapterView<?> adapterView, View view, int rawPosition, long id) {
-            SectionedBaseAdapter adapter;
-            if (adapterView.getAdapter().getClass().equals(HeaderViewListAdapter.class)) {
-                HeaderViewListAdapter wrapperAdapter = (HeaderViewListAdapter) adapterView.getAdapter();
-                adapter = (SectionedBaseAdapter) wrapperAdapter.getWrappedAdapter();
-            } else {
-                adapter = (SectionedBaseAdapter) adapterView.getAdapter();
-            }
-            int section = adapter.getSectionForPosition(rawPosition);
-            int position = adapter.getPositionInSectionForPosition(rawPosition);
+		View view = mAdapter.getSectionHeaderView(section, oldView, this);
+		if (shouldLayout) {
+			// a new section, thus a new header. We should lay it out again
+			ensurePinnedHeaderLayout(view);
+			mCurrentSection = section;
+		}
+		return view;
+	}
 
-            if (position == -1) {
-                onSectionClick(adapterView, view, section, id);
-            } else {
-                onItemClick(adapterView, view, section, position, id);
-            }
-        }
+	private void ensurePinnedHeaderLayout(View header) {
+		if (header.isLayoutRequested()) {
+			int widthSpec = MeasureSpec.makeMeasureSpec(getMeasuredWidth(),
+					mWidthMode);
 
-        public abstract void onItemClick(AdapterView<?> adapterView, View view, int section, int position, long id);
+			int heightSpec;
+			ViewGroup.LayoutParams layoutParams = header.getLayoutParams();
+			if (layoutParams != null && layoutParams.height > 0) {
+				heightSpec = MeasureSpec.makeMeasureSpec(layoutParams.height,
+						MeasureSpec.EXACTLY);
+			} else {
+				heightSpec = MeasureSpec.makeMeasureSpec(0,
+						MeasureSpec.UNSPECIFIED);
+			}
+			header.measure(widthSpec, heightSpec);
+			header.layout(0, 0, header.getMeasuredWidth(),
+					header.getMeasuredHeight());
+		}
+	}
 
-        public abstract void onSectionClick(AdapterView<?> adapterView, View view, int section, long id);
+	@Override
+	protected void dispatchDraw(Canvas canvas) {
+		super.dispatchDraw(canvas);
+		if (mAdapter == null || !mShouldPin || mCurrentHeader == null)
+			return;
+		int saveCount = canvas.save();
+		canvas.translate(0, mHeaderOffset);
+		canvas.clipRect(0, 0, getWidth(), mCurrentHeader.getMeasuredHeight()); // needed
+		// for
+		// <
+		// HONEYCOMB
+		mCurrentHeader.draw(canvas);
+		canvas.restoreToCount(saveCount);
+	}
 
-    }
+	@Override
+	public void setOnScrollListener(OnScrollListener l) {
+		mOnScrollListener = l;
+	}
+
+	@Override
+	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+
+		mWidthMode = MeasureSpec.getMode(widthMeasureSpec);
+		mHeightMode = MeasureSpec.getMode(heightMeasureSpec);
+	}
+
+	public void setSelection(int section, int position) {
+		int pos = mAdapter.getGlobalPosition(section, position);
+		pos += getHeaderViewsCount();
+		super.setSelection(pos);
+	}
+
+	@Override
+	public boolean dispatchTouchEvent(MotionEvent ev) {
+		if (mShouldPin && mCurrentHeader != null) {
+			float x = ev.getX();
+			float y = ev.getY();
+			switch (ev.getAction()) {
+			case MotionEvent.ACTION_DOWN:
+				if (x <= mCurrentHeader.getWidth()
+						&& y <= mCurrentHeader.getHeight()
+								+ getPinHeaderOffset()
+						&& mAdapter.onPinndHeaderTouchEvent(mCurrentHeader,
+								mCurrentSection, ev)) {
+				}
+				break;
+			case MotionEvent.ACTION_UP:
+				if (x <= mCurrentHeader.getWidth()
+						&& y <= mCurrentHeader.getHeight()
+								+ getPinHeaderOffset()
+						&& mAdapter.onPinndHeaderTouchEvent(mCurrentHeader,
+								mCurrentSection, ev)) {
+					Log.d(TAG, "onPinHeaderClick....");
+					Log.d(TAG, "width= " + getCurrentPinHeader().getWidth());
+					Log.d(TAG, "height = " + getCurrentPinHeader().getHeight());
+					Log.d(TAG, "pinOffset =  " + getPinHeaderOffset());
+				}
+				break;
+			default:
+				break;
+			}
+		}
+		return super.dispatchTouchEvent(ev);
+	}
+
+	public void setOnItemClickListener(
+			PinnedHeaderListView.OnItemClickListener listener) {
+		super.setOnItemClickListener(listener);
+	}
+
+	public static abstract class OnItemClickListener implements
+			AdapterView.OnItemClickListener {
+		@Override
+		public void onItemClick(AdapterView<?> adapterView, View view,
+				int rawPosition, long id) {
+			SectionedBaseAdapter adapter;
+			if (adapterView.getAdapter().getClass()
+					.equals(HeaderViewListAdapter.class)) {
+				HeaderViewListAdapter wrapperAdapter = (HeaderViewListAdapter) adapterView
+						.getAdapter();
+				adapter = (SectionedBaseAdapter) wrapperAdapter
+						.getWrappedAdapter();
+			} else {
+				adapter = (SectionedBaseAdapter) adapterView.getAdapter();
+			}
+			int section = adapter.getSectionForPosition(rawPosition);
+			int position = adapter.getPositionInSectionForPosition(rawPosition);
+
+			if (position == -1) {
+				onSectionClick(adapterView, view, section, id);
+			} else {
+				onItemClick(adapterView, view, section, position, id);
+			}
+		}
+
+		public abstract void onItemClick(AdapterView<?> adapterView, View view,
+				int section, int position, long id);
+
+		public abstract void onSectionClick(AdapterView<?> adapterView,
+				View view, int section, long id);
+
+	}
 }
