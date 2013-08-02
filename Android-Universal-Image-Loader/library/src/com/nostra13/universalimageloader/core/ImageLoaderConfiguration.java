@@ -76,6 +76,9 @@ public final class ImageLoaderConfiguration {
 	final DiscCacheAware reserveDiscCache;
 	final ImageDownloader networkDeniedDownloader;
 	final ImageDownloader slowNetworkDownloader;
+	
+	final String discCacheDir;
+	final String userAgent;
 
 	private ImageLoaderConfiguration(final Builder builder) {
 		context = builder.context;
@@ -99,6 +102,9 @@ public final class ImageLoaderConfiguration {
 
 		customExecutor = builder.customExecutor;
 		customExecutorForCachedImages = builder.customExecutorForCachedImages;
+		
+		discCacheDir = builder.discCacheDir;
+		userAgent = builder.userAgent;
 
 		networkDeniedDownloader = new NetworkDeniedImageDownloader(downloader);
 		slowNetworkDownloader = new SlowNetworkImageDownloader(downloader);
@@ -173,6 +179,9 @@ public final class ImageLoaderConfiguration {
 		private int memoryCacheSize = 0;
 		private int discCacheSize = 0;
 		private int discCacheFileCount = 0;
+		
+		private String discCacheDir;
+		private String userAgent;
 
 		private MemoryCacheAware<String, Bitmap> memoryCache = null;
 		private DiscCacheAware discCache = null;
@@ -421,6 +430,11 @@ public final class ImageLoaderConfiguration {
 			this.discCacheFileNameGenerator = fileNameGenerator;
 			return this;
 		}
+		
+		public Builder discCacheDir(String cacheDir){
+			discCacheDir =  cacheDir;
+			return this;
+		}
 
 		/**
 		 * Sets utility which will be responsible for downloading of image.<br />
@@ -480,6 +494,12 @@ public final class ImageLoaderConfiguration {
 			this.defaultDisplayImageOptions = defaultDisplayImageOptions;
 			return this;
 		}
+		
+		
+		public Builder userAgent(String userAgent){
+			this.userAgent = userAgent;
+			return this;
+		}
 
 		/** Enabled detail logging of {@link ImageLoader} work */
 		public Builder enableLogging() {
@@ -508,7 +528,7 @@ public final class ImageLoaderConfiguration {
 				if (discCacheFileNameGenerator == null) {
 					discCacheFileNameGenerator = DefaultConfigurationFactory.createFileNameGenerator();
 				}
-				discCache = DefaultConfigurationFactory.createDiscCache(context, discCacheFileNameGenerator, discCacheSize, discCacheFileCount);
+				discCache = DefaultConfigurationFactory.createDiscCache(context, discCacheFileNameGenerator, discCacheDir, discCacheSize, discCacheFileCount);
 			}
 			if (memoryCache == null) {
 				memoryCache = DefaultConfigurationFactory.createMemoryCache(memoryCacheSize);

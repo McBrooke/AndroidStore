@@ -220,8 +220,9 @@ final class LoadAndDisplayImageTask implements Runnable {
 					listener.onLoadingCancelled(uri, imageView);
 				}
 			});
-			log(LOG_TASK_CANCELLED);
 		}
+
+		if (imageViewWasReused) log(LOG_TASK_CANCELLED);
 		return imageViewWasReused;
 	}
 
@@ -242,15 +243,13 @@ final class LoadAndDisplayImageTask implements Runnable {
 
 				bitmap = decodeImage(Scheme.FILE.wrap(imageFile.getAbsolutePath()));
 			}
-			if (bitmap == null || bitmap.getWidth() <= 0 || bitmap.getHeight() <= 0) {
+			if (bitmap == null) {
 				log(LOG_LOAD_IMAGE_FROM_NETWORK);
 
 				String imageUriForDecoding = options.isCacheOnDisc() ? tryCacheImageOnDisc(imageFile) : uri;
-				if (!checkTaskIsNotActual()) {
-					bitmap = decodeImage(imageUriForDecoding);
-					if (bitmap == null || bitmap.getWidth() <= 0 || bitmap.getHeight() <= 0) {
-						fireImageLoadingFailedEvent(FailType.DECODING_ERROR, null);
-					}
+				bitmap = decodeImage(imageUriForDecoding);
+				if (bitmap == null) {
+					fireImageLoadingFailedEvent(FailType.DECODING_ERROR, null);
 				}
 			}
 		} catch (IllegalStateException e) {

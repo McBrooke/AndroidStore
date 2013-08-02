@@ -18,8 +18,10 @@ package com.nostra13.universalimageloader.utils;
 import java.io.File;
 import java.io.IOException;
 
+
 import android.content.Context;
 import android.os.Environment;
+import android.util.Log;
 
 /**
  * Provides application storage paths
@@ -42,10 +44,10 @@ public final class StorageUtils {
 	 * @param context Application context
 	 * @return Cache {@link File directory}
 	 */
-	public static File getCacheDirectory(Context context) {
+	public static File getCacheDirectory(Context context, String cacheDirPath) {
 		File appCacheDir = null;
 		if (Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED)) {
-			appCacheDir = getExternalCacheDir(context);
+			appCacheDir = getExternalCacheDir(context, cacheDirPath);
 		}
 		if (appCacheDir == null) {
 			appCacheDir = context.getCacheDir();
@@ -61,8 +63,8 @@ public final class StorageUtils {
 	 * @param context Application context
 	 * @return Cache {@link File directory}
 	 */
-	public static File getIndividualCacheDirectory(Context context) {
-		File cacheDir = getCacheDirectory(context);
+	public static File getIndividualCacheDirectory(Context context, String cacheDirPath) {
+		File cacheDir = getCacheDirectory(context, cacheDirPath);
 		File individualCacheDir = new File(cacheDir, INDIVIDUAL_DIR_NAME);
 		if (!individualCacheDir.exists()) {
 			if (!individualCacheDir.mkdir()) {
@@ -72,28 +74,15 @@ public final class StorageUtils {
 		return individualCacheDir;
 	}
 
-	/**
-	 * Returns specified application cache directory. Cache directory will be created on SD card by defined path if card
-	 * is mounted. Else - Android defines cache directory on device's file system.
-	 * 
-	 * @param context Application context
-	 * @param cacheDir Cache directory path (e.g.: "AppCacheDir", "AppDir/cache/images")
-	 * @return Cache {@link File directory}
-	 */
-	public static File getOwnCacheDirectory(Context context, String cacheDir) {
-		File appCacheDir = null;
-		if (Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED)) {
-			appCacheDir = new File(Environment.getExternalStorageDirectory(), cacheDir);
+	private static File getExternalCacheDir(Context context, String cacheDirPath) {
+		File appCacheDir;
+		if(cacheDirPath != null && cacheDirPath.length() > 0){
+			appCacheDir = new File(cacheDirPath);
 		}
-		if (appCacheDir == null || (!appCacheDir.exists() && !appCacheDir.mkdirs())) {
-			appCacheDir = context.getCacheDir();
+		else{
+			File dataDir = new File(new File(Environment.getExternalStorageDirectory(), "Android"), "data");
+			appCacheDir = new File(new File(dataDir, context.getPackageName()), "cache");
 		}
-		return appCacheDir;
-	}
-
-	private static File getExternalCacheDir(Context context) {
-		File dataDir = new File(new File(Environment.getExternalStorageDirectory(), "Android"), "data");
-		File appCacheDir = new File(new File(dataDir, context.getPackageName()), "cache");
 		if (!appCacheDir.exists()) {
 			if (!appCacheDir.mkdirs()) {
 				L.w("Unable to create external cache directory");

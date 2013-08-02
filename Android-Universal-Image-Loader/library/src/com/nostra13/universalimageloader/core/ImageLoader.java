@@ -16,7 +16,7 @@
 package com.nostra13.universalimageloader.core;
 
 import android.graphics.Bitmap;
-import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.ImageView;
@@ -188,7 +188,7 @@ public class ImageLoader {
 			options = configuration.defaultDisplayImageOptions;
 		}
 
-		if (TextUtils.isEmpty(uri)) {
+		if (uri == null || uri.length() == 0) {
 			engine.cancelDisplayTaskFor(imageView);
 			listener.onLoadingStarted(uri, imageView);
 			if (options.shouldShowImageForEmptyUri()) {
@@ -380,6 +380,20 @@ public class ImageLoader {
 	public void clearDiscCache() {
 		checkConfiguration();
 		configuration.discCache.clear();
+	}
+	
+	public String getUserAgent(){
+		String userAgent = null;
+		try{
+			checkConfiguration();
+			userAgent = configuration.userAgent;
+		}catch(IllegalStateException e){
+			e.printStackTrace();
+		}
+		if(userAgent == null || userAgent.length() ==0){
+			userAgent = "android";
+		}
+		return userAgent;
 	}
 
 	/** Returns URI of image which is loading at this moment into passed {@link ImageView} */

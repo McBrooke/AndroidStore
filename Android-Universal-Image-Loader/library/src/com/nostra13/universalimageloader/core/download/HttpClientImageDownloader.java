@@ -24,7 +24,11 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.entity.BufferedHttpEntity;
 
+import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.utils.L;
+
 import android.content.Context;
+import android.util.Log;
 
 /**
  * Implementation of ImageDownloader which uses {@link HttpClient} for image stream retrieving.
@@ -44,6 +48,8 @@ public class HttpClientImageDownloader extends BaseImageDownloader {
 	@Override
 	protected InputStream getStreamFromNetwork(String imageUri, Object extra) throws IOException {
 		HttpGet httpRequest = new HttpGet(imageUri);
+		httpRequest.addHeader("Referer", "http://www.baidu.com/");
+		httpRequest.addHeader("User-Agent", ImageLoader.getInstance().getUserAgent());
 		HttpResponse response = httpClient.execute(httpRequest);
 		HttpEntity entity = response.getEntity();
 		BufferedHttpEntity bufHttpEntity = new BufferedHttpEntity(entity);

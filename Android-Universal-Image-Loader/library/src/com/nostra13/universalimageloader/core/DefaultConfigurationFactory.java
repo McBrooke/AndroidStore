@@ -68,18 +68,19 @@ public class DefaultConfigurationFactory {
 	}
 
 	/** Creates default implementation of {@link DisckCacheAware} depends on incoming parameters */
-	public static DiscCacheAware createDiscCache(Context context, FileNameGenerator discCacheFileNameGenerator, int discCacheSize, int discCacheFileCount) {
+	public static DiscCacheAware createDiscCache(Context context, FileNameGenerator discCacheFileNameGenerator, String cacheDirPath, int discCacheSize, int discCacheFileCount) {
 		if (discCacheSize > 0) {
-			File individualCacheDir = StorageUtils.getIndividualCacheDirectory(context);
+			File individualCacheDir = StorageUtils.getIndividualCacheDirectory(context, cacheDirPath);
 			return new TotalSizeLimitedDiscCache(individualCacheDir, discCacheFileNameGenerator, discCacheSize);
 		} else if (discCacheFileCount > 0) {
-			File individualCacheDir = StorageUtils.getIndividualCacheDirectory(context);
+			File individualCacheDir = StorageUtils.getIndividualCacheDirectory(context, cacheDirPath);
 			return new FileCountLimitedDiscCache(individualCacheDir, discCacheFileNameGenerator, discCacheFileCount);
 		} else {
-			File cacheDir = StorageUtils.getCacheDirectory(context);
+			File cacheDir = StorageUtils.getCacheDirectory(context, cacheDirPath);
 			return new UnlimitedDiscCache(cacheDir, discCacheFileNameGenerator);
 		}
 	}
+	
 
 	/** Creates reserve disc cache which will be used if primary disc cache becomes unavailable */
 	public static DiscCacheAware createReserveDiscCache(Context context) {

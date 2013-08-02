@@ -34,6 +34,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
+import com.nostra13.universalimageloader.core.ImageLoader;
 
 /**
  * Provides retrieving of {@link InputStream} of image by URI from network or file system or app resources.<br />
@@ -123,6 +124,8 @@ public class BaseImageDownloader implements ImageDownloader {
 		HttpURLConnection conn = (HttpURLConnection) new URL(encodedUrl).openConnection();
 		conn.setConnectTimeout(connectTimeout);
 		conn.setReadTimeout(readTimeout);
+		conn.addRequestProperty("Referer", "http://www.baidu.com/");
+		conn.addRequestProperty("User-Agent", ImageLoader.getInstance().getUserAgent());
 		conn.connect();
 		return conn;
 	}
